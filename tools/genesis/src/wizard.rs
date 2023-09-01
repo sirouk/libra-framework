@@ -7,6 +7,7 @@ use crate::{genesis_builder, parse_json, supply::SupplySettings};
 // TODO: import from libra
 use crate::genesis_registration;
 use libra_types::ol_progress::OLProgress;
+use diem_types::chain_id::NamedChain;
 //////
 use crate::github_extensions::LibraGithubClient;
 use anyhow::{bail, Context};
@@ -45,13 +46,21 @@ pub struct GenesisWizard {
     pub github_token: String,
     /// the home path of the user
     pub data_path: PathBuf,
+    // TODO: remove
     /// what epoch is the fork happening from
     pub epoch: Option<u64>,
+    /// what epoch is the fork happening from
+    pub chain: NamedChain,
 }
 
 impl GenesisWizard {
     /// constructor
-    pub fn new(genesis_repo_org: String, repo_name: String, data_path: Option<PathBuf>) -> Self {
+    pub fn new(
+        genesis_repo_org: String,
+        repo_name: String,
+        data_path: Option<PathBuf>,
+        chain: NamedChain,
+    ) -> Self {
         let data_path = data_path.unwrap_or_else(global_config_dir);
 
         Self {
@@ -62,6 +71,7 @@ impl GenesisWizard {
             github_token: "".to_string(),
             data_path,
             epoch: None,
+            chain, // defaults to testing.
         }
     }
 
@@ -143,6 +153,7 @@ impl GenesisWizard {
                 use_local_framework,
                 Some(&legacy_recovery),
                 supply_settings,
+                self.chain.clone(),
             )?;
 
             for _ in (0..10)
@@ -404,6 +415,7 @@ fn test_wizard() {
         "0LNetworkCommunity".to_string(),
         "test_genesis".to_string(),
         None,
+        NamedChain::TESTING,
     );
     wizard.start_wizard(false, None, false, None).unwrap();
 }
@@ -415,6 +427,7 @@ fn test_register() {
         "0LNetworkCommunity".to_string(),
         "test_genesis".to_string(),
         None,
+        NamedChain::TESTING,
     );
     g.validator_address = "0xTEST".to_string();
     g.git_token_check().unwrap();

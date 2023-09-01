@@ -11,15 +11,21 @@ use diem_types::{
     chain_id::ChainId,
     transaction::{Transaction, WriteSetPayload},
 };
-use diem_vm_genesis::Validator;
+use diem_vm_genesis::{GenesisConfiguration, Validator};
+
+#[cfg(test)]
+use crate::vm::libra_genesis_default;
+#[cfg(test)]
+use libra_types::exports::NamedChain;
+
 /// Make a recovery genesis blob
 pub fn make_recovery_genesis_from_vec_legacy_recovery(
     recovery: Option<&[LegacyRecovery]>,
     genesis_vals: &[Validator],
-    // genesis_blob_path: &PathBuf,
     framework_release: &ReleaseBundle,
     chain_id: ChainId,
     supply_settings: Option<SupplySettings>,
+    genesis_config: &GenesisConfiguration,
 ) -> Result<Transaction, Error> {
     let supply_settings = supply_settings.unwrap_or_default();
     // Note: For `recovery` on a real upgrade or fork, we want to include all user accounts. If a None is passed, then we'll just run the default genesis
@@ -30,6 +36,7 @@ pub fn make_recovery_genesis_from_vec_legacy_recovery(
         framework_release,
         chain_id,
         &supply_settings,
+        genesis_config,
     )?;
 
     let gen_tx = Transaction::GenesisTransaction(WriteSetPayload::Direct(recovery_changeset));
@@ -47,7 +54,6 @@ pub fn save_genesis(gen_tx: &Transaction, output_path: &PathBuf) -> Result<(), E
 }
 
 #[test]
-
 fn test_basic_genesis() {
     use libra_framework::head_release_bundle;
     use diem_vm_genesis::TestValidator;
@@ -59,6 +65,7 @@ fn test_basic_genesis() {
         &head_release_bundle(),
         ChainId::test(),
         None,
+        &libra_genesis_default(NamedChain::TESTING),
     )
     .unwrap();
 }
@@ -86,6 +93,7 @@ fn test_recovery_genesis() {
         &head_release_bundle(),
         ChainId::test(),
         None,
+        &libra_genesis_default(NamedChain::TESTING),
     )
     .unwrap();
 
