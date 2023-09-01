@@ -8,21 +8,21 @@ use crate::supply::Supply;
 
 use anyhow;
 // use libra_types::move_resource::coin_info::GasCoinInfoResource;
+use diem_storage_interface::state_view::LatestDbStateCheckpointView;
+use diem_types::transaction::Transaction;
 use libra_types::exports::AccountAddress;
 use libra_types::legacy_types::legacy_address::LegacyAddress;
 use libra_types::legacy_types::legacy_recovery::{read_from_recovery_file, LegacyRecovery};
 use libra_types::move_resource::gas_coin::{GasCoinStoreResource, SlowWalletBalance};
 use libra_types::ol_progress::OLProgress;
 use move_core_types::language_storage::CORE_CODE_ADDRESS;
-use diem_storage_interface::state_view::LatestDbStateCheckpointView;
-use diem_types::transaction::Transaction;
 
-use indicatif::{ProgressBar, ProgressIterator};
-use std::path::PathBuf;
-use std::sync::Arc;
 use diem_state_view::account_with_state_view::AsAccountWithStateView;
 use diem_storage_interface::DbReader;
 use diem_types::account_view::AccountView;
+use indicatif::{ProgressBar, ProgressIterator};
+use std::path::PathBuf;
+use std::sync::Arc;
 
 #[derive(Debug)]
 /// struct for holding the results of a comparison
@@ -39,19 +39,11 @@ pub struct CompareError {
 /// Compare the balances in a recovery file to the balances in a genesis blob.
 pub fn compare_recovery_vec_to_genesis_tx(
     recovery: &[LegacyRecovery],
-    genesis_transaction: &Transaction,
+    db_reader: &Arc<dyn DbReader>,
     supply: &Supply,
 ) -> Result<Vec<CompareError>, anyhow::Error> {
     // start an empty btree map
     let mut err_list: Vec<CompareError> = vec![];
-
-    let pb = ProgressBar::new(1000)
-        .with_style(OLProgress::spinner())
-        .with_message("check genesis bootstraps db");
-    pb.enable_steady_tick(core::time::Duration::from_millis(500));
-    // iterate over the recovery file and compare balances
-    let (db_rw, _) = genesis_reader::bootstrap_db_reader_from_gen_tx(genesis_transaction)?;
-    pb.finish_and_clear();
 
     recovery
         .iter()
@@ -86,7 +78,7 @@ pub fn compare_recovery_vec_to_genesis_tx(
                 AccountAddress::from_hex_literal(&v.account.unwrap().to_hex_literal())
                     .expect("could not convert address types");
 
-            let db_state_view = db_rw.reader.latest_state_checkpoint_view().unwrap();
+            let db_state_view = db_reader.latest_state_checkpoint_view().unwrap();
             let account_state_view = db_state_view.as_account_with_state_view(&convert_address);
 
             if let Some(slow_legacy) = &v.slow_wallet {
@@ -138,7 +130,8 @@ pub fn compare_json_to_genesis_blob(
     let recovery = read_from_recovery_file(&json_path);
 
     let gen_tx = genesis_reader::read_blob_to_tx(genesis_path)?;
-    compare_recovery_vec_to_genesis_tx(&recovery, &gen_tx, supply)
+    let (db_rw, _) = genesis_reader::bootstrap_db_reader_from_gen_tx(&gen_tx)?;
+    compare_recovery_vec_to_genesis_tx(&recovery, &db_rw.reader, supply)
 }
 
 // Check that the genesis validators are present in the genesis blob file, once we read the db.
@@ -176,16 +169,20 @@ pub fn check_val_set(
 
 pub fn check_supply(
     expected_supply: u64,
-    genesis_transaction: &Transaction,
+    // genesis_transaction: &Transaction,
+    db_reader: &Arc<dyn DbReader>,
 ) -> Result<(), anyhow::Error> {
-    let (db_rw, _) = genesis_reader::bootstrap_db_reader_from_gen_tx(genesis_transaction)?;
+    let pb = ProgressBar::new(1000)
+        .with_style(OLProgress::spinner())
+        .with_message("checking coin migration");
+    pb.enable_steady_tick(core::time::Duration::from_millis(500));
 
-    let on_chain_supply = total_supply(&db_rw.reader).unwrap();
+    let on_chain_supply = total_supply(db_reader).unwrap();
 
+    pb.finish_and_clear();
     assert!(
         expected_supply as u128 == on_chain_supply,
         "supply mismatch, expected: {expected_supply:?} vs in genesis tx {on_chain_supply:?}"
     );
-
     Ok(())
 }

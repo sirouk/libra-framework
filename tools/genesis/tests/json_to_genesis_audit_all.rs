@@ -1,15 +1,14 @@
 //! Tests for the `make_genesis` binary.
 mod support;
 use libra_framework::head_release_bundle;
+use libra_genesis_tools::genesis_reader;
 use libra_genesis_tools::supply::{self, SupplySettings};
 use libra_genesis_tools::vm::libra_genesis_default;
 use libra_genesis_tools::{compare, genesis::make_recovery_genesis_from_vec_legacy_recovery};
-use libra_types::exports::ChainId;
+use libra_types::exports::{ChainId, NamedChain};
 use libra_types::legacy_types::legacy_recovery::LegacyRecovery;
 use std::fs;
 use support::{path_utils::json_path, test_vals};
-use zapatos_types::chain_id::NamedChain;
-// use libra_types::exports::AccountAddress;
 
 #[test]
 // test that a genesis blob created from struct, will actually contain the data
@@ -43,8 +42,9 @@ fn test_correct_supply_arithmetic_all() {
     .unwrap();
 
     // NOTE: in the case of a single account being migrated, that account balance will equal the total supply as set in: SupplySettings. i.e. 10B
-
-    match compare::compare_recovery_vec_to_genesis_tx(&user_accounts, &gen_tx, &supply_stats) {
+    let (db_rw, _) = genesis_reader::bootstrap_db_reader_from_gen_tx(&gen_tx).unwrap();
+    match compare::compare_recovery_vec_to_genesis_tx(&user_accounts, &db_rw.reader, &supply_stats)
+    {
         Ok(list) => {
             if !list.is_empty() {
                 panic!("list is not empty: {list:#?}");

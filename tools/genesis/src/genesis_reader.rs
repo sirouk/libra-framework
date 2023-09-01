@@ -2,15 +2,6 @@
 #![allow(clippy::mutable_key_type)] // TODO: don't quite know how to fix that warning
 
 use anyhow::{self, bail, Context};
-use libra_types::exports::AccountAddress;
-use libra_types::exports::Waypoint;
-use libra_types::move_resource::coin_info::GasCoinInfoResource;
-use move_core_types::identifier::Identifier;
-use move_core_types::language_storage::{StructTag, CORE_CODE_ADDRESS};
-use std::fs::File;
-use std::io::Read;
-use std::path::PathBuf;
-use std::sync::Arc;
 use diem_db::DiemDB;
 use diem_executor::db_bootstrapper::generate_waypoint;
 use diem_executor::db_bootstrapper::maybe_bootstrap;
@@ -26,12 +17,29 @@ use diem_types::state_store::state_key::StateKey;
 use diem_types::state_store::state_key_prefix::StateKeyPrefix;
 use diem_types::transaction::Transaction;
 use diem_vm::DiemVM;
+use indicatif::ProgressBar;
+use libra_types::exports::AccountAddress;
+use libra_types::exports::Waypoint;
+use libra_types::move_resource::coin_info::GasCoinInfoResource;
+use libra_types::ol_progress::OLProgress;
+use move_core_types::identifier::Identifier;
+use move_core_types::language_storage::{StructTag, CORE_CODE_ADDRESS};
+use std::fs::File;
+use std::io::Read;
+use std::path::PathBuf;
+use std::sync::Arc;
 /// Compute the ledger given a genesis writeset transaction and return access to that ledger and
 /// the waypoint for that state.
 pub fn bootstrap_db_reader_from_gen_tx(
     genesis_transaction: &Transaction,
     // db_path: &Path,
 ) -> anyhow::Result<(DbReaderWriter, Waypoint)> {
+    let pb = ProgressBar::new(1000)
+        .with_style(OLProgress::spinner())
+        .with_message("check genesis bootstraps db");
+    pb.enable_steady_tick(core::time::Duration::from_millis(500));
+    // iterate over the recovery file and compare balances
+
     let tmp_dir = TempPath::new();
     let db_rw = DbReaderWriter::new(DiemDB::new_for_test(&tmp_dir));
 
@@ -46,6 +54,7 @@ pub fn bootstrap_db_reader_from_gen_tx(
         generate_waypoint::<DiemVM>(&db_rw, genesis_transaction).expect("Should not fail.");
     maybe_bootstrap::<DiemVM>(&db_rw, genesis_transaction, waypoint).unwrap();
 
+    pb.finish_and_clear();
     Ok((db_rw, waypoint))
 }
 
@@ -131,11 +140,11 @@ pub fn total_supply(db_reader: &Arc<dyn DbReader>) -> Option<u128> {
 
 #[test]
 fn test_db_rw() {
-    use libra_types::exports::AccountAddress;
     use diem_db::DiemDB;
     use diem_executor::db_bootstrapper::maybe_bootstrap;
     use diem_temppath::TempPath;
     use diem_types::state_store::state_key::StateKey;
+    use libra_types::exports::AccountAddress;
 
     let tmp_dir = TempPath::new().path().to_owned();
 
