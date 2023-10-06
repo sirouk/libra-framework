@@ -250,12 +250,6 @@ pub enum EntryFunctionCall {
         id: u64,
     },
 
-    DummyUseFnFromDiemFramework {},
-
-    DummyUseFnFromDiemStd {
-        account_public_key_bytes: Vec<u8>,
-    },
-
     /// Only a Voucher of the validator can flip the unjail bit.
     /// This is a way to make sure the validator is ready to rejoin.
     JailUnjailByVoucher {
@@ -476,14 +470,14 @@ pub enum EntryFunctionCall {
     /// except it leaves the ValidatorConfig to be set by another entity.
     /// Note: this triggers setting the operator and owner, set it to the account's address
     /// to set later.
-    StakeInitializeStakeOwner {
+    StakeOldInitializeStakeOwner {
         initial_stake_amount: u64,
         operator: AccountAddress,
         _voter: AccountAddress,
     },
 
     /// Initialize the validator account and give ownership to the signing account.
-    StakeInitializeValidator {
+    StakeOldInitializeValidator {
         consensus_pubkey: Vec<u8>,
         proof_of_possession: Vec<u8>,
         network_addresses: Vec<u8>,
@@ -493,7 +487,7 @@ pub enum EntryFunctionCall {
     /// Unlock from active delegation, it's moved to pending_inactive if locked_until_secs < current_time or
     /// directly inactive if it's not from an active validator.
     /// This can only called by the operator of the validator/staking pool.
-    StakeJoinValidatorSet {
+    StakeOldJoinValidatorSet {
         pool_address: AccountAddress,
     },
 
@@ -505,25 +499,25 @@ pub enum EntryFunctionCall {
     /// is still operational.
     ///
     /// Can only be called by the operator of the validator/staking pool.
-    StakeLeaveValidatorSet {
+    StakeOldLeaveValidatorSet {
         pool_address: AccountAddress,
     },
 
     /// Add `amount` of coins from the `account` owning the StakePool.
     /// Rotate the consensus key of the validator, it'll take effect in next epoch.
-    StakeRotateConsensusKey {
+    StakeOldRotateConsensusKey {
         pool_address: AccountAddress,
         new_consensus_pubkey: Vec<u8>,
         proof_of_possession: Vec<u8>,
     },
 
     /// Allows an owner to change the operator of the stake pool.
-    StakeSetOperator {
+    StakeOldSetOperator {
         new_operator: AccountAddress,
     },
 
     /// Update the network and full node addresses of the validator. This only takes effect in the next epoch.
-    StakeUpdateNetworkAndFullnodeAddresses {
+    StakeOldUpdateNetworkAndFullnodeAddresses {
         pool_address: AccountAddress,
         new_network_addresses: Vec<u8>,
         new_fullnode_addresses: Vec<u8>,
@@ -545,6 +539,47 @@ pub enum EntryFunctionCall {
         proof_of_possession: Vec<u8>,
         network_addresses: Vec<u8>,
         fullnode_addresses: Vec<u8>,
+    },
+
+    /// This is only called during Genesis, which is where MintCapability<GasCoin> can be created.
+    /// Beyond genesis, no one can create GasCoin mint/burn capabilities.
+    /// Allow on chain governance to remove validators from the validator set.
+    /// Initialize the validator account and give ownership to the signing account
+    /// except it leaves the ValidatorConfig to be set by another entity.
+    /// Note: this triggers setting the operator and owner, set it to the account's address
+    /// to set later.
+    StakeInitializeStakeOwner {
+        initial_stake_amount: u64,
+        operator: AccountAddress,
+        _voter: AccountAddress,
+    },
+
+    /// Initialize the validator account and give ownership to the signing account.
+    StakeInitializeValidator {
+        consensus_pubkey: Vec<u8>,
+        proof_of_possession: Vec<u8>,
+        network_addresses: Vec<u8>,
+        fullnode_addresses: Vec<u8>,
+    },
+
+    /// Add `amount` of coins from the `account` owning the ValidatorState.
+    /// Rotate the consensus key of the validator, it'll take effect in next epoch.
+    StakeRotateConsensusKey {
+        pool_address: AccountAddress,
+        new_consensus_pubkey: Vec<u8>,
+        proof_of_possession: Vec<u8>,
+    },
+
+    /// Allows an owner to change the operator of the stake pool.
+    StakeSetOperator {
+        new_operator: AccountAddress,
+    },
+
+    /// Update the network and full node addresses of the validator. This only takes effect in the next epoch.
+    StakeUpdateNetworkAndFullnodeAddresses {
+        pool_address: AccountAddress,
+        new_network_addresses: Vec<u8>,
+        new_fullnode_addresses: Vec<u8>,
     },
 
     /// Updates the major version to a larger version.
@@ -730,10 +765,6 @@ impl EntryFunctionCall {
                 multisig_address,
                 id,
             } => donor_directed_vote_veto_tx(multisig_address, id),
-            DummyUseFnFromDiemFramework {} => dummy_use_fn_from_diem_framework(),
-            DummyUseFnFromDiemStd {
-                account_public_key_bytes,
-            } => dummy_use_fn_from_diem_std(account_public_key_bytes),
             JailUnjailByVoucher { addr } => jail_unjail_by_voucher(addr),
             GasCoinClaimMintCapability {} => gas_coin_claim_mint_capability(),
             GasCoinDelegateMintCapability { to } => gas_coin_delegate_mint_capability(to),
@@ -841,37 +872,41 @@ impl EntryFunctionCall {
                 unlocked,
                 transferred,
             } => slow_wallet_smoke_test_vm_unlock(user_addr, unlocked, transferred),
-            StakeInitializeStakeOwner {
+            StakeOldInitializeStakeOwner {
                 initial_stake_amount,
                 operator,
                 _voter,
-            } => stake_initialize_stake_owner(initial_stake_amount, operator, _voter),
-            StakeInitializeValidator {
+            } => stake_old_initialize_stake_owner(initial_stake_amount, operator, _voter),
+            StakeOldInitializeValidator {
                 consensus_pubkey,
                 proof_of_possession,
                 network_addresses,
                 fullnode_addresses,
-            } => stake_initialize_validator(
+            } => stake_old_initialize_validator(
                 consensus_pubkey,
                 proof_of_possession,
                 network_addresses,
                 fullnode_addresses,
             ),
-            StakeJoinValidatorSet { pool_address } => stake_join_validator_set(pool_address),
-            StakeLeaveValidatorSet { pool_address } => stake_leave_validator_set(pool_address),
-            StakeRotateConsensusKey {
+            StakeOldJoinValidatorSet { pool_address } => stake_old_join_validator_set(pool_address),
+            StakeOldLeaveValidatorSet { pool_address } => {
+                stake_old_leave_validator_set(pool_address)
+            }
+            StakeOldRotateConsensusKey {
                 pool_address,
                 new_consensus_pubkey,
                 proof_of_possession,
-            } => {
-                stake_rotate_consensus_key(pool_address, new_consensus_pubkey, proof_of_possession)
-            }
-            StakeSetOperator { new_operator } => stake_set_operator(new_operator),
-            StakeUpdateNetworkAndFullnodeAddresses {
+            } => stake_old_rotate_consensus_key(
+                pool_address,
+                new_consensus_pubkey,
+                proof_of_possession,
+            ),
+            StakeOldSetOperator { new_operator } => stake_old_set_operator(new_operator),
+            StakeOldUpdateNetworkAndFullnodeAddresses {
                 pool_address,
                 new_network_addresses,
                 new_fullnode_addresses,
-            } => stake_update_network_and_fullnode_addresses(
+            } => stake_old_update_network_and_fullnode_addresses(
                 pool_address,
                 new_network_addresses,
                 new_fullnode_addresses,
@@ -892,6 +927,39 @@ impl EntryFunctionCall {
                 proof_of_possession,
                 network_addresses,
                 fullnode_addresses,
+            ),
+            StakeInitializeStakeOwner {
+                initial_stake_amount,
+                operator,
+                _voter,
+            } => stake_initialize_stake_owner(initial_stake_amount, operator, _voter),
+            StakeInitializeValidator {
+                consensus_pubkey,
+                proof_of_possession,
+                network_addresses,
+                fullnode_addresses,
+            } => stake_initialize_validator(
+                consensus_pubkey,
+                proof_of_possession,
+                network_addresses,
+                fullnode_addresses,
+            ),
+            StakeRotateConsensusKey {
+                pool_address,
+                new_consensus_pubkey,
+                proof_of_possession,
+            } => {
+                stake_rotate_consensus_key(pool_address, new_consensus_pubkey, proof_of_possession)
+            }
+            StakeSetOperator { new_operator } => stake_set_operator(new_operator),
+            StakeUpdateNetworkAndFullnodeAddresses {
+                pool_address,
+                new_network_addresses,
+                new_fullnode_addresses,
+            } => stake_update_network_and_fullnode_addresses(
+                pool_address,
+                new_network_addresses,
+                new_fullnode_addresses,
             ),
             VersionSetVersion { major } => version_set_version(major),
             VouchInsistVouchFor { wanna_be_my_friend } => {
@@ -1526,36 +1594,6 @@ pub fn donor_directed_vote_veto_tx(
             bcs::to_bytes(&multisig_address).unwrap(),
             bcs::to_bytes(&id).unwrap(),
         ],
-    ))
-}
-
-pub fn dummy_use_fn_from_diem_framework() -> TransactionPayload {
-    TransactionPayload::EntryFunction(EntryFunction::new(
-        ModuleId::new(
-            AccountAddress::new([
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 1,
-            ]),
-            ident_str!("dummy").to_owned(),
-        ),
-        ident_str!("use_fn_from_diem_framework").to_owned(),
-        vec![],
-        vec![],
-    ))
-}
-
-pub fn dummy_use_fn_from_diem_std(account_public_key_bytes: Vec<u8>) -> TransactionPayload {
-    TransactionPayload::EntryFunction(EntryFunction::new(
-        ModuleId::new(
-            AccountAddress::new([
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 1,
-            ]),
-            ident_str!("dummy").to_owned(),
-        ),
-        ident_str!("use_fn_from_diem_std").to_owned(),
-        vec![],
-        vec![bcs::to_bytes(&account_public_key_bytes).unwrap()],
     ))
 }
 
@@ -2195,7 +2233,7 @@ pub fn slow_wallet_smoke_test_vm_unlock(
 /// except it leaves the ValidatorConfig to be set by another entity.
 /// Note: this triggers setting the operator and owner, set it to the account's address
 /// to set later.
-pub fn stake_initialize_stake_owner(
+pub fn stake_old_initialize_stake_owner(
     initial_stake_amount: u64,
     operator: AccountAddress,
     _voter: AccountAddress,
@@ -2206,7 +2244,7 @@ pub fn stake_initialize_stake_owner(
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1,
             ]),
-            ident_str!("stake").to_owned(),
+            ident_str!("stake_old").to_owned(),
         ),
         ident_str!("initialize_stake_owner").to_owned(),
         vec![],
@@ -2219,7 +2257,7 @@ pub fn stake_initialize_stake_owner(
 }
 
 /// Initialize the validator account and give ownership to the signing account.
-pub fn stake_initialize_validator(
+pub fn stake_old_initialize_validator(
     consensus_pubkey: Vec<u8>,
     proof_of_possession: Vec<u8>,
     network_addresses: Vec<u8>,
@@ -2231,7 +2269,7 @@ pub fn stake_initialize_validator(
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1,
             ]),
-            ident_str!("stake").to_owned(),
+            ident_str!("stake_old").to_owned(),
         ),
         ident_str!("initialize_validator").to_owned(),
         vec![],
@@ -2247,14 +2285,14 @@ pub fn stake_initialize_validator(
 /// Unlock from active delegation, it's moved to pending_inactive if locked_until_secs < current_time or
 /// directly inactive if it's not from an active validator.
 /// This can only called by the operator of the validator/staking pool.
-pub fn stake_join_validator_set(pool_address: AccountAddress) -> TransactionPayload {
+pub fn stake_old_join_validator_set(pool_address: AccountAddress) -> TransactionPayload {
     TransactionPayload::EntryFunction(EntryFunction::new(
         ModuleId::new(
             AccountAddress::new([
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1,
             ]),
-            ident_str!("stake").to_owned(),
+            ident_str!("stake_old").to_owned(),
         ),
         ident_str!("join_validator_set").to_owned(),
         vec![],
@@ -2270,14 +2308,14 @@ pub fn stake_join_validator_set(pool_address: AccountAddress) -> TransactionPayl
 /// is still operational.
 ///
 /// Can only be called by the operator of the validator/staking pool.
-pub fn stake_leave_validator_set(pool_address: AccountAddress) -> TransactionPayload {
+pub fn stake_old_leave_validator_set(pool_address: AccountAddress) -> TransactionPayload {
     TransactionPayload::EntryFunction(EntryFunction::new(
         ModuleId::new(
             AccountAddress::new([
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1,
             ]),
-            ident_str!("stake").to_owned(),
+            ident_str!("stake_old").to_owned(),
         ),
         ident_str!("leave_validator_set").to_owned(),
         vec![],
@@ -2287,7 +2325,7 @@ pub fn stake_leave_validator_set(pool_address: AccountAddress) -> TransactionPay
 
 /// Add `amount` of coins from the `account` owning the StakePool.
 /// Rotate the consensus key of the validator, it'll take effect in next epoch.
-pub fn stake_rotate_consensus_key(
+pub fn stake_old_rotate_consensus_key(
     pool_address: AccountAddress,
     new_consensus_pubkey: Vec<u8>,
     proof_of_possession: Vec<u8>,
@@ -2298,7 +2336,7 @@ pub fn stake_rotate_consensus_key(
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1,
             ]),
-            ident_str!("stake").to_owned(),
+            ident_str!("stake_old").to_owned(),
         ),
         ident_str!("rotate_consensus_key").to_owned(),
         vec![],
@@ -2311,14 +2349,14 @@ pub fn stake_rotate_consensus_key(
 }
 
 /// Allows an owner to change the operator of the stake pool.
-pub fn stake_set_operator(new_operator: AccountAddress) -> TransactionPayload {
+pub fn stake_old_set_operator(new_operator: AccountAddress) -> TransactionPayload {
     TransactionPayload::EntryFunction(EntryFunction::new(
         ModuleId::new(
             AccountAddress::new([
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1,
             ]),
-            ident_str!("stake").to_owned(),
+            ident_str!("stake_old").to_owned(),
         ),
         ident_str!("set_operator").to_owned(),
         vec![],
@@ -2327,7 +2365,7 @@ pub fn stake_set_operator(new_operator: AccountAddress) -> TransactionPayload {
 }
 
 /// Update the network and full node addresses of the validator. This only takes effect in the next epoch.
-pub fn stake_update_network_and_fullnode_addresses(
+pub fn stake_old_update_network_and_fullnode_addresses(
     pool_address: AccountAddress,
     new_network_addresses: Vec<u8>,
     new_fullnode_addresses: Vec<u8>,
@@ -2338,7 +2376,7 @@ pub fn stake_update_network_and_fullnode_addresses(
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1,
             ]),
-            ident_str!("stake").to_owned(),
+            ident_str!("stake_old").to_owned(),
         ),
         ident_str!("update_network_and_fullnode_addresses").to_owned(),
         vec![],
@@ -2400,6 +2438,127 @@ pub fn validator_universe_register_validator(
             bcs::to_bytes(&proof_of_possession).unwrap(),
             bcs::to_bytes(&network_addresses).unwrap(),
             bcs::to_bytes(&fullnode_addresses).unwrap(),
+        ],
+    ))
+}
+
+/// This is only called during Genesis, which is where MintCapability<GasCoin> can be created.
+/// Beyond genesis, no one can create GasCoin mint/burn capabilities.
+/// Allow on chain governance to remove validators from the validator set.
+/// Initialize the validator account and give ownership to the signing account
+/// except it leaves the ValidatorConfig to be set by another entity.
+/// Note: this triggers setting the operator and owner, set it to the account's address
+/// to set later.
+pub fn stake_initialize_stake_owner(
+    initial_stake_amount: u64,
+    operator: AccountAddress,
+    _voter: AccountAddress,
+) -> TransactionPayload {
+    TransactionPayload::EntryFunction(EntryFunction::new(
+        ModuleId::new(
+            AccountAddress::new([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1,
+            ]),
+            ident_str!("stake").to_owned(),
+        ),
+        ident_str!("initialize_stake_owner").to_owned(),
+        vec![],
+        vec![
+            bcs::to_bytes(&initial_stake_amount).unwrap(),
+            bcs::to_bytes(&operator).unwrap(),
+            bcs::to_bytes(&_voter).unwrap(),
+        ],
+    ))
+}
+
+/// Initialize the validator account and give ownership to the signing account.
+pub fn stake_initialize_validator(
+    consensus_pubkey: Vec<u8>,
+    proof_of_possession: Vec<u8>,
+    network_addresses: Vec<u8>,
+    fullnode_addresses: Vec<u8>,
+) -> TransactionPayload {
+    TransactionPayload::EntryFunction(EntryFunction::new(
+        ModuleId::new(
+            AccountAddress::new([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1,
+            ]),
+            ident_str!("stake").to_owned(),
+        ),
+        ident_str!("initialize_validator").to_owned(),
+        vec![],
+        vec![
+            bcs::to_bytes(&consensus_pubkey).unwrap(),
+            bcs::to_bytes(&proof_of_possession).unwrap(),
+            bcs::to_bytes(&network_addresses).unwrap(),
+            bcs::to_bytes(&fullnode_addresses).unwrap(),
+        ],
+    ))
+}
+
+/// Add `amount` of coins from the `account` owning the ValidatorState.
+/// Rotate the consensus key of the validator, it'll take effect in next epoch.
+pub fn stake_rotate_consensus_key(
+    pool_address: AccountAddress,
+    new_consensus_pubkey: Vec<u8>,
+    proof_of_possession: Vec<u8>,
+) -> TransactionPayload {
+    TransactionPayload::EntryFunction(EntryFunction::new(
+        ModuleId::new(
+            AccountAddress::new([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1,
+            ]),
+            ident_str!("stake").to_owned(),
+        ),
+        ident_str!("rotate_consensus_key").to_owned(),
+        vec![],
+        vec![
+            bcs::to_bytes(&pool_address).unwrap(),
+            bcs::to_bytes(&new_consensus_pubkey).unwrap(),
+            bcs::to_bytes(&proof_of_possession).unwrap(),
+        ],
+    ))
+}
+
+/// Allows an owner to change the operator of the stake pool.
+pub fn stake_set_operator(new_operator: AccountAddress) -> TransactionPayload {
+    TransactionPayload::EntryFunction(EntryFunction::new(
+        ModuleId::new(
+            AccountAddress::new([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1,
+            ]),
+            ident_str!("stake").to_owned(),
+        ),
+        ident_str!("set_operator").to_owned(),
+        vec![],
+        vec![bcs::to_bytes(&new_operator).unwrap()],
+    ))
+}
+
+/// Update the network and full node addresses of the validator. This only takes effect in the next epoch.
+pub fn stake_update_network_and_fullnode_addresses(
+    pool_address: AccountAddress,
+    new_network_addresses: Vec<u8>,
+    new_fullnode_addresses: Vec<u8>,
+) -> TransactionPayload {
+    TransactionPayload::EntryFunction(EntryFunction::new(
+        ModuleId::new(
+            AccountAddress::new([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1,
+            ]),
+            ident_str!("stake").to_owned(),
+        ),
+        ident_str!("update_network_and_fullnode_addresses").to_owned(),
+        vec![],
+        vec![
+            bcs::to_bytes(&pool_address).unwrap(),
+            bcs::to_bytes(&new_network_addresses).unwrap(),
+            bcs::to_bytes(&new_fullnode_addresses).unwrap(),
         ],
     ))
 }
@@ -2820,26 +2979,6 @@ mod decoder {
         }
     }
 
-    pub fn dummy_use_fn_from_diem_framework(
-        payload: &TransactionPayload,
-    ) -> Option<EntryFunctionCall> {
-        if let TransactionPayload::EntryFunction(_script) = payload {
-            Some(EntryFunctionCall::DummyUseFnFromDiemFramework {})
-        } else {
-            None
-        }
-    }
-
-    pub fn dummy_use_fn_from_diem_std(payload: &TransactionPayload) -> Option<EntryFunctionCall> {
-        if let TransactionPayload::EntryFunction(script) = payload {
-            Some(EntryFunctionCall::DummyUseFnFromDiemStd {
-                account_public_key_bytes: bcs::from_bytes(script.args().get(0)?).ok()?,
-            })
-        } else {
-            None
-        }
-    }
-
     pub fn jail_unjail_by_voucher(payload: &TransactionPayload) -> Option<EntryFunctionCall> {
         if let TransactionPayload::EntryFunction(script) = payload {
             Some(EntryFunctionCall::JailUnjailByVoucher {
@@ -3205,6 +3344,127 @@ mod decoder {
         }
     }
 
+    pub fn stake_old_initialize_stake_owner(
+        payload: &TransactionPayload,
+    ) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(EntryFunctionCall::StakeOldInitializeStakeOwner {
+                initial_stake_amount: bcs::from_bytes(script.args().get(0)?).ok()?,
+                operator: bcs::from_bytes(script.args().get(1)?).ok()?,
+                _voter: bcs::from_bytes(script.args().get(2)?).ok()?,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn stake_old_initialize_validator(
+        payload: &TransactionPayload,
+    ) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(EntryFunctionCall::StakeOldInitializeValidator {
+                consensus_pubkey: bcs::from_bytes(script.args().get(0)?).ok()?,
+                proof_of_possession: bcs::from_bytes(script.args().get(1)?).ok()?,
+                network_addresses: bcs::from_bytes(script.args().get(2)?).ok()?,
+                fullnode_addresses: bcs::from_bytes(script.args().get(3)?).ok()?,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn stake_old_join_validator_set(payload: &TransactionPayload) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(EntryFunctionCall::StakeOldJoinValidatorSet {
+                pool_address: bcs::from_bytes(script.args().get(0)?).ok()?,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn stake_old_leave_validator_set(
+        payload: &TransactionPayload,
+    ) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(EntryFunctionCall::StakeOldLeaveValidatorSet {
+                pool_address: bcs::from_bytes(script.args().get(0)?).ok()?,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn stake_old_rotate_consensus_key(
+        payload: &TransactionPayload,
+    ) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(EntryFunctionCall::StakeOldRotateConsensusKey {
+                pool_address: bcs::from_bytes(script.args().get(0)?).ok()?,
+                new_consensus_pubkey: bcs::from_bytes(script.args().get(1)?).ok()?,
+                proof_of_possession: bcs::from_bytes(script.args().get(2)?).ok()?,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn stake_old_set_operator(payload: &TransactionPayload) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(EntryFunctionCall::StakeOldSetOperator {
+                new_operator: bcs::from_bytes(script.args().get(0)?).ok()?,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn stake_old_update_network_and_fullnode_addresses(
+        payload: &TransactionPayload,
+    ) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(
+                EntryFunctionCall::StakeOldUpdateNetworkAndFullnodeAddresses {
+                    pool_address: bcs::from_bytes(script.args().get(0)?).ok()?,
+                    new_network_addresses: bcs::from_bytes(script.args().get(1)?).ok()?,
+                    new_fullnode_addresses: bcs::from_bytes(script.args().get(2)?).ok()?,
+                },
+            )
+        } else {
+            None
+        }
+    }
+
+    pub fn tower_state_minerstate_commit(
+        payload: &TransactionPayload,
+    ) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(EntryFunctionCall::TowerStateMinerstateCommit {
+                challenge: bcs::from_bytes(script.args().get(0)?).ok()?,
+                solution: bcs::from_bytes(script.args().get(1)?).ok()?,
+                difficulty: bcs::from_bytes(script.args().get(2)?).ok()?,
+                security: bcs::from_bytes(script.args().get(3)?).ok()?,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn validator_universe_register_validator(
+        payload: &TransactionPayload,
+    ) -> Option<EntryFunctionCall> {
+        if let TransactionPayload::EntryFunction(script) = payload {
+            Some(EntryFunctionCall::ValidatorUniverseRegisterValidator {
+                consensus_pubkey: bcs::from_bytes(script.args().get(0)?).ok()?,
+                proof_of_possession: bcs::from_bytes(script.args().get(1)?).ok()?,
+                network_addresses: bcs::from_bytes(script.args().get(2)?).ok()?,
+                fullnode_addresses: bcs::from_bytes(script.args().get(3)?).ok()?,
+            })
+        } else {
+            None
+        }
+    }
+
     pub fn stake_initialize_stake_owner(payload: &TransactionPayload) -> Option<EntryFunctionCall> {
         if let TransactionPayload::EntryFunction(script) = payload {
             Some(EntryFunctionCall::StakeInitializeStakeOwner {
@@ -3224,26 +3484,6 @@ mod decoder {
                 proof_of_possession: bcs::from_bytes(script.args().get(1)?).ok()?,
                 network_addresses: bcs::from_bytes(script.args().get(2)?).ok()?,
                 fullnode_addresses: bcs::from_bytes(script.args().get(3)?).ok()?,
-            })
-        } else {
-            None
-        }
-    }
-
-    pub fn stake_join_validator_set(payload: &TransactionPayload) -> Option<EntryFunctionCall> {
-        if let TransactionPayload::EntryFunction(script) = payload {
-            Some(EntryFunctionCall::StakeJoinValidatorSet {
-                pool_address: bcs::from_bytes(script.args().get(0)?).ok()?,
-            })
-        } else {
-            None
-        }
-    }
-
-    pub fn stake_leave_validator_set(payload: &TransactionPayload) -> Option<EntryFunctionCall> {
-        if let TransactionPayload::EntryFunction(script) = payload {
-            Some(EntryFunctionCall::StakeLeaveValidatorSet {
-                pool_address: bcs::from_bytes(script.args().get(0)?).ok()?,
             })
         } else {
             None
@@ -3280,36 +3520,6 @@ mod decoder {
                 pool_address: bcs::from_bytes(script.args().get(0)?).ok()?,
                 new_network_addresses: bcs::from_bytes(script.args().get(1)?).ok()?,
                 new_fullnode_addresses: bcs::from_bytes(script.args().get(2)?).ok()?,
-            })
-        } else {
-            None
-        }
-    }
-
-    pub fn tower_state_minerstate_commit(
-        payload: &TransactionPayload,
-    ) -> Option<EntryFunctionCall> {
-        if let TransactionPayload::EntryFunction(script) = payload {
-            Some(EntryFunctionCall::TowerStateMinerstateCommit {
-                challenge: bcs::from_bytes(script.args().get(0)?).ok()?,
-                solution: bcs::from_bytes(script.args().get(1)?).ok()?,
-                difficulty: bcs::from_bytes(script.args().get(2)?).ok()?,
-                security: bcs::from_bytes(script.args().get(3)?).ok()?,
-            })
-        } else {
-            None
-        }
-    }
-
-    pub fn validator_universe_register_validator(
-        payload: &TransactionPayload,
-    ) -> Option<EntryFunctionCall> {
-        if let TransactionPayload::EntryFunction(script) = payload {
-            Some(EntryFunctionCall::ValidatorUniverseRegisterValidator {
-                consensus_pubkey: bcs::from_bytes(script.args().get(0)?).ok()?,
-                proof_of_possession: bcs::from_bytes(script.args().get(1)?).ok()?,
-                network_addresses: bcs::from_bytes(script.args().get(2)?).ok()?,
-                fullnode_addresses: bcs::from_bytes(script.args().get(3)?).ok()?,
             })
         } else {
             None
@@ -3478,14 +3688,6 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<EntryFunctionDecoderMa
             Box::new(decoder::donor_directed_vote_veto_tx),
         );
         map.insert(
-            "dummy_use_fn_from_diem_framework".to_string(),
-            Box::new(decoder::dummy_use_fn_from_diem_framework),
-        );
-        map.insert(
-            "dummy_use_fn_from_diem_std".to_string(),
-            Box::new(decoder::dummy_use_fn_from_diem_std),
-        );
-        map.insert(
             "jail_unjail_by_voucher".to_string(),
             Box::new(decoder::jail_unjail_by_voucher),
         );
@@ -3606,20 +3808,48 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<EntryFunctionDecoderMa
             Box::new(decoder::slow_wallet_smoke_test_vm_unlock),
         );
         map.insert(
+            "stake_old_initialize_stake_owner".to_string(),
+            Box::new(decoder::stake_old_initialize_stake_owner),
+        );
+        map.insert(
+            "stake_old_initialize_validator".to_string(),
+            Box::new(decoder::stake_old_initialize_validator),
+        );
+        map.insert(
+            "stake_old_join_validator_set".to_string(),
+            Box::new(decoder::stake_old_join_validator_set),
+        );
+        map.insert(
+            "stake_old_leave_validator_set".to_string(),
+            Box::new(decoder::stake_old_leave_validator_set),
+        );
+        map.insert(
+            "stake_old_rotate_consensus_key".to_string(),
+            Box::new(decoder::stake_old_rotate_consensus_key),
+        );
+        map.insert(
+            "stake_old_set_operator".to_string(),
+            Box::new(decoder::stake_old_set_operator),
+        );
+        map.insert(
+            "stake_old_update_network_and_fullnode_addresses".to_string(),
+            Box::new(decoder::stake_old_update_network_and_fullnode_addresses),
+        );
+        map.insert(
+            "tower_state_minerstate_commit".to_string(),
+            Box::new(decoder::tower_state_minerstate_commit),
+        );
+        map.insert(
+            "validator_universe_register_validator".to_string(),
+            Box::new(decoder::validator_universe_register_validator),
+        );
+        map.insert(
             "stake_initialize_stake_owner".to_string(),
             Box::new(decoder::stake_initialize_stake_owner),
         );
         map.insert(
             "stake_initialize_validator".to_string(),
             Box::new(decoder::stake_initialize_validator),
-        );
-        map.insert(
-            "stake_join_validator_set".to_string(),
-            Box::new(decoder::stake_join_validator_set),
-        );
-        map.insert(
-            "stake_leave_validator_set".to_string(),
-            Box::new(decoder::stake_leave_validator_set),
         );
         map.insert(
             "stake_rotate_consensus_key".to_string(),
@@ -3632,14 +3862,6 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<EntryFunctionDecoderMa
         map.insert(
             "stake_update_network_and_fullnode_addresses".to_string(),
             Box::new(decoder::stake_update_network_and_fullnode_addresses),
-        );
-        map.insert(
-            "tower_state_minerstate_commit".to_string(),
-            Box::new(decoder::tower_state_minerstate_commit),
-        );
-        map.insert(
-            "validator_universe_register_validator".to_string(),
-            Box::new(decoder::validator_universe_register_validator),
         );
         map.insert(
             "version_set_version".to_string(),
