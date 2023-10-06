@@ -47,7 +47,7 @@ module ol_framework::test_pof {
     mock::ol_initialize_coin_and_fund_vals(&root, 10000, true);
 
     let alice = vector::borrow(&set, 0);
-    stake::is_valid(*alice);
+    stake::is_registered(*alice);
 
     let a_sig = account::create_signer_for_test(*alice);
     proof_of_fee::init(&a_sig);
@@ -83,7 +83,7 @@ module ol_framework::test_pof {
 
     let alice = *vector::borrow(&set, 0);
 
-    assert!(stake::is_valid(alice), 1000);
+    assert!(stake::is_registered(alice), 1000);
     assert!(!jail::is_jailed(alice), 1001);
 
     mock_good_bid(&root, &alice);

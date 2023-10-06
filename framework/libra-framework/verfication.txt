@@ -1,0 +1,9 @@
+[INFO] preparing module 0x1::epoch_boundary
+[INFO] transforming bytecode
+[INFO] generating verification conditions
+[INFO] 12 verification conditions
+[INFO] running solver
+[INFO] 3.623s build, 6.377s trafo, 0.165s gen, 231.372s verify, total 241.537s
+{
+  "Error": "Move Prover failed: exiting with verification errors"
+}

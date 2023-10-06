@@ -49,7 +49,7 @@ module ol_framework::mock {
 
   #[test_only]
   public fun mock_case_1(vm: &signer, addr: address){
-      assert!(stake::is_valid(addr), 01);
+      assert!(stake::is_registered(addr), 01);
       stake::mock_performance(vm, addr, 1, 0);
       let (compliant, _, _, _) = grade::get_validator_grade(addr);
       assert!(compliant, 777703);
@@ -59,7 +59,7 @@ module ol_framework::mock {
     #[test_only]
     // did not do enough mining, but did validate.
     public fun mock_case_4(vm: &signer, addr: address){
-      assert!(stake::is_valid(addr), 01);
+      assert!(stake::is_registered(addr), 01);
       stake::mock_performance(vm, addr, 0, 100); // 100 failing proposals
       let (compliant, _, _, _) = grade::get_validator_grade(addr);
       assert!(!compliant, 777703);
