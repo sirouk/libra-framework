@@ -8,7 +8,7 @@ use diem_genesis::config::OperatorConfiguration;
 use diem_types::account_address::AccountAddress;
 use libra_cached_packages::libra_stdlib::EntryFunctionCall::{
     JailUnjailByVoucher, ProofOfFeePofRetractBid, ProofOfFeePofUpdateBid,
-    ValidatorUniverseRegisterValidator, VouchRevoke, VouchVouchFor,
+    ValidatorUniverseRegisterValidator, StakeUpdateNetworkAndFullnodeAddresses, VouchRevoke, VouchVouchFor,
 };
 
 use libra_types::global_config_dir;
@@ -41,6 +41,11 @@ pub enum ValidatorTxs {
         revoke: bool,
     },
     Register {
+        #[clap(short('f'), long)]
+        /// optional, Path to files with registration files
+        operator_file: Option<PathBuf>,
+    },
+    Update {
         #[clap(short('f'), long)]
         /// optional, Path to files with registration files
         operator_file: Option<PathBuf>,
@@ -101,17 +106,20 @@ impl ValidatorTxs {
                     .validator_host
                     .as_network_address(oc.validator_network_public_key)?;
 
-                // let fullnode_host = oc.full_node_host.context("cannot find fullnode host")?;
-                // let fullnode_addr = fullnode_host.as_network_address(
-                // oc.full_node_network_public_key
-                // .context("cannot find fullnode network public key")?,
-                // )?;
 
+                let fullnode_host = oc.full_node_host;
+                let fullnode_address_result = fullnode_host.map_or_else(
+                    || Err(anyhow::Error::msg("No fullnode host available")),
+                    |host| host.as_network_address(
+                        oc.full_node_network_public_key.expect("Expected a fullnode network public key")
+                    )
+                );
+                
                 ValidatorUniverseRegisterValidator {
                     consensus_pubkey: oc.consensus_public_key.to_bytes().to_vec(),
                     proof_of_possession: oc.consensus_proof_of_possession.to_bytes().to_vec(),
                     network_addresses: bcs::to_bytes(&validator_address)?,
-                    fullnode_addresses: vec![], // TODO
+                    fullnode_addresses: bcs::to_bytes(&fullnode_address_result?)?,
                 }
             }
         };
