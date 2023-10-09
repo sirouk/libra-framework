@@ -127,4 +127,32 @@ impl ValidatorTxs {
         sender.sign_submit_wait(payload.encode()).await?;
         Ok(())
     }
+    ValidatorTxs::Update { operator_file } => {
+        let file = operator_file.to_owned().unwrap_or_else(|| {
+            let a = global_config_dir();
+            a.join(OPERATOR_FILE)
+        });
+
+        let yaml_str = fs::read_to_string(file)?;
+        let oc: OperatorConfiguration = serde_yaml::from_str(&yaml_str)?;
+
+        let validator_address = oc
+            .validator_host
+            .as_network_address(oc.validator_network_public_key)?;
+
+
+        let fullnode_host = oc.full_node_host;
+        let fullnode_address_result = fullnode_host.map_or_else(
+            || Err(anyhow::Error::msg("No fullnode host available")),
+            |host| host.as_network_address(
+                oc.full_node_network_public_key.expect("Expected a fullnode network public key")
+            )
+        );
+
+        StakeUpdateNetworkAndFullnodeAddresses  {
+            pool_address: oc.operator_account_address.into(),
+            new_network_addresses: bcs::to_bytes(&validator_address)?,
+            new_fullnode_addresses: bcs::to_bytes(&fullnode_address_result?)?,
+        }
+    }
 }
