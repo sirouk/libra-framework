@@ -15,7 +15,7 @@ module ol_framework::test_stake {
   fun bulk_update_validators(root: signer) {
     let set = mock::genesis_n_vals(&root, 6);
     let alice = vector::borrow(&set, 0);
-    assert!(stake::is_valid(*alice), 1000);
+    assert!(stake::is_registered(*alice), 1000);
 
     let vals = stake::get_current_validators();
     assert!(vector::length(&vals) == 6, 1001);
@@ -51,7 +51,7 @@ module ol_framework::test_stake {
     testnet::unset(&root); // set to production mode
 
     let alice = vector::borrow(&set, 0);
-    assert!(stake::is_valid(*alice), 1000);
+    assert!(stake::is_registered(*alice), 1000);
 
     let vals = stake::get_current_validators();
     assert!(vector::length(&vals) == 10, 1001);
@@ -80,7 +80,7 @@ module ol_framework::test_stake {
     testnet::unset(&root); // set to production mode
 
     let alice = vector::borrow(&set, 0);
-    assert!(stake::is_valid(*alice), 1000);
+    assert!(stake::is_registered(*alice), 1000);
 
     let vals = stake::get_current_validators();
     assert!(vector::length(&vals) == 8, 1001);

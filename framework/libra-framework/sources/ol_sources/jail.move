@@ -116,7 +116,7 @@ module ol_framework::jail {
   /// This is a way to make sure the validator is ready to rejoin.
   public entry fun unjail_by_voucher(sender: &signer, addr: address) acquires Jail {
     assert!(
-      stake::is_valid(addr),
+      stake::is_registered(addr),
       error::invalid_state(EVALIDATOR_CONFIG),
     );
     let voucher = signer::address_of(sender);

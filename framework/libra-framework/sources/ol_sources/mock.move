@@ -25,7 +25,7 @@ module ol_framework::mock {
   use ol_framework::globals;
   use diem_framework::block;
   // use diem_framework::chain_status;
-  // use diem_std::debug::print;
+  use diem_std::debug::print;
 
   const ENO_GENESIS_END_MARKER: u64 = 1;
   const EDID_NOT_ADVANCE_EPOCH: u64 = 1;
@@ -49,7 +49,7 @@ module ol_framework::mock {
 
   #[test_only]
   public fun mock_case_1(vm: &signer, addr: address){
-      assert!(stake::is_valid(addr), 01);
+      assert!(stake::is_registered(addr), 01);
       stake::mock_performance(vm, addr, 1, 0);
       let (compliant, _, _, _) = grade::get_validator_grade(addr);
       assert!(compliant, 777703);
@@ -59,7 +59,7 @@ module ol_framework::mock {
     #[test_only]
     // did not do enough mining, but did validate.
     public fun mock_case_4(vm: &signer, addr: address){
-      assert!(stake::is_valid(addr), 01);
+      assert!(stake::is_registered(addr), 01);
       stake::mock_performance(vm, addr, 0, 100); // 100 failing proposals
       let (compliant, _, _, _) = grade::get_validator_grade(addr);
       assert!(!compliant, 777703);
@@ -251,6 +251,9 @@ module ol_framework::mock {
         i = i + 1;
       };
 
+      timestamp::fast_forward_seconds(2); // or else reconfigure wont happen
+      stake::test_reconfigure(root, validator_universe::get_eligible_validators());
+
       stake::get_current_validators()
     }
 
@@ -299,6 +302,7 @@ module ol_framework::mock {
     // genesis();
 
     let set = genesis_n_vals(&root, 4);
+    print(&set);
     assert!(vector::length(&set) == 4, 7357001);
 
     let addr = vector::borrow(&set, 0);
