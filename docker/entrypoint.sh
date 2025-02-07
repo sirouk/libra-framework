@@ -57,5 +57,9 @@ export LIBRA_CI=1
 export MODE_0L="TESTNET"
 $HOME/.cargo/target/release/libra ops genesis testnet --framework-mrb-path $HOME/libra-framework/framework/releases/head.mrb --me "$ME" --host-list alice:6180 --host-list bob:6180 --host-list carol:6180 
 
+# PATCH: open ports in node config
+echo "Opening ports in node config..."
+sed -i 's/127.0.0.1/0.0.0.0/g' $HOME/.libra/validator.yaml
+
 echo "Starting up the libra node..."
 RUST_LOG=INFO $HOME/.cargo/target/release/libra node
