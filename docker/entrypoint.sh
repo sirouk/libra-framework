@@ -17,7 +17,7 @@ if [ ! -d "$HOME/libra-framework" ]; then
     mkdir -p "$HOME/.cargo"
     cat > "$HOME/.cargo/config.toml" << EOF
 [build]
-target-dir = "/root/.cargo/target"
+target-dir = "$HOME/.cargo/target"
 
 [cache]
 shared = true
@@ -52,7 +52,7 @@ cp -rf $HOME/libra-framework/framework/releases/mainnet.mrb $HOME/libra-framewor
 echo "Starting Libra node: $ME"
 export LIBRA_CI=1
 export MODE_0L="TESTNET"
-$HOME/.cargo/bin/libra ops genesis testnet --framework-mrb-path $HOME/libra-framework/framework/releases/head.mrb --me "$ME" --host-list alice:6180 --host-list bob:6180 --host-list carol:6180 
+$HOME/.cargo/target/release/libra ops genesis testnet --framework-mrb-path $HOME/libra-framework/framework/releases/head.mrb --me "$ME" --host-list alice:6180 --host-list bob:6180 --host-list carol:6180 
 
 echo "Starting up the libra node..."
-RUST_LOG=INFO $HOME/.cargo/bin/libra node
+RUST_LOG=INFO $HOME/.cargo/target/release/libra node
