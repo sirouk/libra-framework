@@ -41,7 +41,7 @@ else
     # Wait for the build-complete signal
     while [ ! -f "/build-signal/build-complete" ]; do
         echo "Waiting for build to complete..."
-        sleep 5
+        sleep 15
     done
     echo "Build is complete, proceeding..."
 fi
