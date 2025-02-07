@@ -114,6 +114,17 @@ docker logs -f bob --tail 100
 docker logs -f carol --tail 100
 ```
 
+### Real-time Network Status
+
+For a quick overview of the testnet status, use the provided watch script:
+
+```bash
+# Updates every second
+watch -n1 ./watch_testnet.sh
+```
+
+This will show you a real-time view of the network's status, including node health and synchronization state.
+
 ## Stopping the Testnet
 
 To stop the testnet:
