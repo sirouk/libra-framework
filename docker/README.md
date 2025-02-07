@@ -1,6 +1,6 @@
 # Libra Framework Testnet in a Bottle
 
-## TLDR
+## TLDR; start up
 
 ```bash
 # Install Docker (Ubuntu)
@@ -20,6 +20,20 @@ docker compose logs -f --tail 100
 # Watch the testnet from the outside
 watch -n1 ./watch_testnet.sh
 ```
+
+## Node Ports
+
+Access the nodes through their exposed ports:
+
+| Node    | RPC Port | Metrics Port |
+|---------|----------|--------------|
+| Alice   | 8280     | 9201         |
+| Bob     | 8380     | 9301         |
+| Carol   | 8480     | 9401         |
+
+Example URLs:
+- RPC endpoint: `http://localhost:8280/v1`
+- Metrics endpoint: `http://localhost:9201/metrics`
 
 This repository contains Docker configuration for running a local 3-node Libra testnet. The setup includes three validator nodes: Alice, Bob, and Carol.
 
