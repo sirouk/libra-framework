@@ -31,6 +31,7 @@ if [ "$ME" = "alice" ]; then
     echo "This is $ME, performing the build..."
 
     echo "Building libra-framework..."
+    . "$HOME/.cargo/env" -- -y
     cd $HOME/libra-framework/
     cargo build --release -p libra
 
