@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  alice:
+    #image: ghcr.io/0lnetworkcommunity/libra-framework/libra-node:247355ef53e8a7a36f4aff28eadf99a0b8354b11
+    image: ubuntu:22.04
+    container_name: libra_alice
+    hostname: alice
+    environment:
+      - ME=alice
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh
+      - cargo-cache:/root/.cargo
+      - build-signal:/build-signal
+    command: [ "sh", "/entrypoint.sh" ]
+    networks:
+      - libra_network
+    ports:
+      - "8180:8080"
+      - "9201:9101"
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+
+  bob:
+    #image: ghcr.io/0lnetworkcommunity/libra-framework/libra-node:247355ef53e8a7a36f4aff28eadf99a0b8354b11
+    image: ubuntu:22.04
+    container_name: libra_bob
+    hostname: bob
+    depends_on:
+      - alice
+    environment:
+      - ME=bob
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh
+      - cargo-cache:/root/.cargo
+      - build-signal:/build-signal
+    command: [ "sh", "/entrypoint.sh" ]
+    networks:
+      - libra_network
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+
+  carol:
+    #image: ghcr.io/0lnetworkcommunity/libra-framework/libra-node:247355ef53e8a7a36f4aff28eadf99a0b8354b11
+    image: ubuntu:22.04
+    container_name: libra_carol
+    hostname: carol
+    depends_on:
+      - alice
+    environment:
+      - ME=carol
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh
+      - cargo-cache:/root/.cargo
+      - build-signal:/build-signal
+    command: [ "sh", "/entrypoint.sh" ]
+    networks:
+      - libra_network
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+        
+networks:
+  libra_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24
+
+volumes:
+  cargo-cache:
+  build-signal:
