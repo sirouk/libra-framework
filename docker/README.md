@@ -120,6 +120,7 @@ For a quick overview of the testnet status, use the provided watch script:
 
 ```bash
 # Updates every second
+cd $HOME/libra-framework/docker
 watch -n1 ./watch_testnet.sh
 ```
 
