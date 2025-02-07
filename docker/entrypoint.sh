@@ -1,7 +1,6 @@
 #!/bin/sh
 set -e
 
-# Remove any existing build signal
 rm -f /build-signal/build-complete
 
 cd $HOME
@@ -13,7 +12,6 @@ if [ ! -d "$HOME/libra-framework" ]; then
     curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain stable -y
     . "$HOME/.cargo/env" -- -y
     
-    # Configure cargo to use the shared cache
     mkdir -p "$HOME/.cargo"
     cat > "$HOME/.cargo/config.toml" << EOF
 [build]
@@ -39,7 +37,6 @@ if [ "$ME" = "alice" ]; then
     touch /build-signal/build-complete
 else
     echo "This is $ME, waiting for alice to complete the build..."
-    # Wait for the build-complete signal
     while [ ! -f "/build-signal/build-complete" ]; do
         echo "Waiting for build to complete..."
         sleep 15
