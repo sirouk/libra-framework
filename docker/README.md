@@ -1,4 +1,4 @@
-# Libra Framework Local Testnet
+# Libra Framework Testnet in a Bottle
 
 This repository contains Docker configuration for running a local 3-node Libra testnet. The setup includes three validator nodes: Alice, Bob, and Carol.
 
@@ -32,14 +32,16 @@ docker run hello-world
 
 1. Clone this repository:
 ```bash
-git clone <repository-url>
-cd libra-framework
+$HOME
+git clone https://github.com/0LNetworkCommunity/libra-framework
+cd $HOME/libra-framework
 ```
 
 2. Start the testnet using Docker Compose:
 ```bash
-cd docker
-docker compose up
+cd $HOME/libra-framework/docker
+docker compose up -d
+docker compose logs -f --tail 100
 ```
 
 ### Build Options
@@ -103,8 +105,8 @@ The setup uses Docker volumes to share resources between containers:
 You can monitor each node's logs in real-time:
 
 ```bash
-# View all logs
-docker logs -f --tail 100
+# View compose logs
+docker compose logs -f --tail 100
 
 # View specific node logs
 docker logs -f alice --tail 100
@@ -117,11 +119,13 @@ docker logs -f carol --tail 100
 To stop the testnet:
 
 ```bash
+cd $HOME/libra-framework/docker
 docker compose down
 ```
 
 To stop and remove all data (including cached builds):
 ```bash
+cd $HOME/libra-framework/docker
 docker compose down -v
 ```
 
@@ -132,10 +136,18 @@ docker compose down -v
 2. If nodes are not connecting:
    - Ensure no other services are using the required ports
    - Check the logs for specific error messages
-   - Try restarting the network with ```bash docker compose down && docker compose up```
+   - Try restarting the network with:
+   ```bash 
+   cd $HOME/libra-framework/docker
+   docker compose down && docker compose up
+   ```
 
 3. If the build seems stuck:
-   - Check Alice's logs specifically: ```bash docker logs -f alice --tail 100```
+   - Check Alice's logs specifically: 
+   ```bash 
+   cd $HOME/libra-framework/docker
+   docker logs -f alice --tail 100
+   ```
    - The initial build can take several minutes depending on your system
    - Verify the build-signal volume is working properly
 
@@ -143,6 +155,7 @@ docker compose down -v
    - If the build seems corrupted, ensure Alice has `FRESH_BUILD=true`
    - Try a complete reset:
      ```bash
+     cd $HOME/libra-framework/docker
      docker compose down -v
      docker compose up --force-recreate
      ```
