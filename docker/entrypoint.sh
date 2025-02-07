@@ -4,7 +4,12 @@ set -e
 rm -f /build-signal/build-complete
 
 cd $HOME
-#rm -rf ./libra-framework
+
+if [ "$FRESH_BUILD" = "true" ]; then
+    echo "Fresh build requested, cleaning up..."
+    rm -rf ./libra-framework
+fi
+
 if [ ! -d "$HOME/libra-framework" ]; then
     echo "Fetching dependencies..."
     apt update && apt install -y curl git tmux jq build-essential cmake clang llvm libgmp-dev pkg-config libssl-dev lld libpq-dev
