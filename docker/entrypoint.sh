@@ -52,7 +52,7 @@ cp -rf $HOME/libra-framework/framework/releases/mainnet.mrb $HOME/libra-framewor
 echo "Starting Libra node: $ME"
 export LIBRA_CI=1
 export MODE_0L="TESTNET"
-LIBRA_CI=1 MODE_0L="TESTNET" ./target/release/libra ops genesis testnet --framework-mrb-path $HOME/libra-framework/framework/releases/head.mrb --me "$ME" --host-list alice:6180 --host-list bob:6180 --host-list carol:6180 
+$HOME/.cargo/bin/libra ops genesis testnet --framework-mrb-path $HOME/libra-framework/framework/releases/head.mrb --me "$ME" --host-list alice:6180 --host-list bob:6180 --host-list carol:6180 
 
 echo "Starting up the libra node..."
-RUST_LOG=INFO ./target/release/libra node
+RUST_LOG=INFO $HOME/.cargo/bin/libra node
