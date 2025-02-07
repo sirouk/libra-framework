@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ### Install Docker on Ubuntu
 # source: https://docs.docker.com/engine/install/ubuntu/
 
