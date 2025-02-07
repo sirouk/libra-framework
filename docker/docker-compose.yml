@@ -17,7 +17,7 @@ services:
     networks:
       - libra_network
     ports:
-      - "8180:8080"
+      - "8280:8080"
       - "9201:9101"
     ulimits:
       nofile:
@@ -40,6 +40,9 @@ services:
     command: [ "sh", "/entrypoint.sh" ]
     networks:
       - libra_network
+    ports:
+      - "8380:8080"
+      - "9301:9101"
     ulimits:
       nofile:
         soft: 1048576
@@ -61,6 +64,9 @@ services:
     command: [ "sh", "/entrypoint.sh" ]
     networks:
       - libra_network
+    ports:
+      - "8480:8080"
+      - "9401:9101"
     ulimits:
       nofile:
         soft: 1048576
