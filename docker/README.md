@@ -1,5 +1,26 @@
 # Libra Framework Testnet in a Bottle
 
+## TLDR
+
+```bash
+# Install Docker (Ubuntu)
+sudo ./docker/install_docker.sh
+sudo usermod -aG docker $USER
+# Log out and log back in!
+
+# Get the code & start testnet
+cd $HOME
+git clone https://github.com/0LNetworkCommunity/libra-framework
+cd libra-framework/docker
+docker compose up -d
+
+# View logs as it composes
+docker compose logs -f --tail 100
+
+# Watch the testnet from the outside
+watch -n1 ./watch_testnet.sh
+```
+
 This repository contains Docker configuration for running a local 3-node Libra testnet. The setup includes three validator nodes: Alice, Bob, and Carol.
 
 ## Prerequisites
